@@ -1,0 +1,310 @@
+<?php
+
+//include(wire('config')->paths->siteModules."/PwOptions/PwOptions.module");
+include(wire('config')->paths->siteModules."/TemplateEngine/wigets.php");
+include(wire('config')->paths->siteModules."/TemplateEngine/document.php");
+include(wire('config')->paths->siteModules."/TemplateEngine/yink_share.php");
+include(wire('config')->paths->siteModules."/TemplateEngine/jsoner.php");
+class TemplateEngine extends WireData implements Module {
+	
+	public static $page;
+	
+	private static $seen;
+
+	/**
+	 * getModuleInfo is a module required by all modules to tell ProcessWire about them
+	 *
+	 * @return array
+	 *
+	 */    
+	public static function getModuleInfo() {
+
+		return array(
+			'title' => 'Template Engine', 
+
+			'version' => 1,
+			'summary' => 'Template Engine for process wire',
+			'href' => 'http://myhilarious.com',
+			'singular' => true,
+			'autoload' => true,
+			'icon' => 'smile-o', 
+			);
+	}
+
+	/**
+	 * Initialize the module
+	 *
+	 * ProcessWire calls this when the module is loaded. For 'autoload' modules, this will be called
+	 * when ProcessWire's API is ready. As a result, this is a good place to attach hooks. 
+	 *
+	 */
+	public function init() {
+//	self::init_engine();
+	} 
+	
+	
+public static function get_wiget($name,$options=array()){
+	
+	$wiget = self::factory($name);
+	if ($wiget) {
+		self::$seen[$name]=TRUE;
+		$MethodChecker = new ReflectionMethod($wiget,'run');
+	if ($MethodChecker->isStatic()) {
+							//echo "string";
+		$wiget::run($options);
+		return $wiget;
+		}else{
+			//$yin = new $wiget();
+			$wiget->run($options);
+			return $wiget;
+		}
+		
+		//$wiget::run($options);
+	
+		
+	}else {
+		return false;
+	}
+	
+} 
+public static function reset_seen($arr){
+	
+	foreach ($$arr as $key => $value) {
+		self::$seen[$key]=FALSE;	
+	}
+	
+} 
+
+public static function unseter (&$g,$value_check,$key,$array_check){
+		$k= $array_check[$key];
+				if(is_array($k)){
+					if(!array_search($value_check, $k)){
+						unset($g[$key]);
+					}
+				}else{
+					if($g[$key]!=$size){
+						unset($g[$key]);
+					}
+				}
+				
+}
+
+
+public static function get2($name="",$options=array(),$size="",$tag="",$again="",$amount=0){
+	$wigets = &wigets::$wigets;
+		$g =  $wigets["status"];
+		$options['size'] = $size;
+	if ($name) {
+		
+	return array($name => self::get_wiget($name,$options));
+	}else{
+		
+		foreach ($g as $key => $value) {
+						
+			if ($size) self::unseter($g, $size, $key, $wiget["size"]);
+			if ($tag)  self::unseter($g, $tag, $key, $wiget["tag"]);
+			if ($again)self::unseter($g, $again, $key, $wiget["again"]);
+			           self::unseter($g, false, $key, $wiget["main"]);
+			           self::unseter($g, true, $key, $wiget["status"]);
+			
+		}
+		$h = $g;
+		if(count($g)>$amount){
+			foreach ($g as $key => $value) {
+			self::unseter($g, false, $key, self::$seen);
+			
+			}
+		}else{
+			self::reset_seen($g);	
+			}
+		
+		
+		if (count($g)<$amount) {
+			self::reset_seen($h);
+		}
+		asort($wiget["piority"]);
+		$m;
+		// sort piority
+		foreach ($wiget["piority"] as $key => $value) {
+			if (isset($g[$key])) {
+				$m[$key]=$value;
+			}
+			
+			}
+		
+		$ans =  array( );
+if (!empty ( $m ) ) {	
+
+    $min = min ( count ( $m ), $amount );
+
+    $i = 0;
+
+    foreach ($m as $key => $value) {
+     $wiget = self::get_wiget($key);
+		if ($wiget) {
+		$ans[$key] == $wiget ;	
+		}
+      
+      $i++;
+      if ($i == $min) break;
+
+    }
+
+  }	
+	return $ans;
+	}
+} 
+
+ 
+public static function init_engine()
+{
+	//echo "stringgggggggggggggggggg";
+	/*
+	
+	 if(wire('user')->isLoggedin()){
+	 $s= PwOptions::yin_get('seen',wire('user')->id);
+	 if ($s) {
+		 self::$seen = json_decode($s);
+	 } 
+	 }else{
+	 	 $s= wire('session')->get('seen');
+	 if ($s) {
+		 self::$seen = json_decode($s);
+	 } 
+	 }
+	 */
+//echo "string";
+	self::submit_forms();
+	     
+	self::init_wigets();
+	yink_share::populate_doc();
+}
+ public static function init_wigets()
+{
+	doc::set_wigets(doc::$debug, TemplateEngine::get2('yink_msg'));
+}
+
+
+
+
+
+public static function factory($className) {
+     $className = wire('sanitizer')->name($className);
+	 if( file_exists ( wire('config')->paths->siteModules."/TemplateEngine/wigets/".$className."/".$className.".php")){
+	 	//echo "string template engine 165 ".$className;
+		 if(!class_exists($className)){
+    include_once wire('config')->paths->siteModules."/TemplateEngine/wigets/".$className."/".$className.".php";
+		 }
+    if(class_exists($className)){
+    //	echo "string template engine 168";
+    	 return new $className();
+	}else{
+		return false;
+	}
+	 }
+   // die('Cannot create new "'.$className.'" class - includes not found or class unavailable.');
+}
+
+
+
+
+public static function submit_forms()
+{
+	
+	$input = wire('input');
+	if($input->get['wiget'] || $input->post['wiget']){
+		$wiget ;
+		if ($input->get['wiget'] ) {
+		$wiget = $input->get['wiget']  ;	
+		} else {
+			$wiget = $input->post['wiget']  ;
+		}
+	$wiget = wire('sanitizer')->name($wiget);	
+	//echo $wiget;
+	$wiget = self::factory($wiget);
+	if ($wiget) {
+		
+		$wiget::form();
+	}
+	}
+}
+
+
+
+public static function wrap_up(){
+	
+	
+}
+
+
+public static function hmmn ($left , $left_left , $right , $right_right,$type=1)
+        {
+        	$arr = array();
+            if ($left) {
+                $arr[0]=1;
+            }else {$arr[0]=0;}
+			 if ($left_left) {
+                $arr[1]=1;
+            }else {$arr[1]=0;}
+			if ($right) {
+                $arr[2]=1;
+            }else {$arr[2]=0;}
+			if ($right_right) {
+                $arr[3]=1;
+            }else {$arr[3]=0;}
+			
+			if ($type==1) {
+				if (array_sum($arr)<2) {
+					return 3;
+				}else {
+					return 2;
+				}
+			} 
+			
+			if ($type==2) {
+				if (array_sum($arr)<2) {
+					return 12 - (3*array_sum($arr));
+				}else {
+					return 12 - (2*array_sum($arr));
+				}
+			} 
+			
+        }
+
+
+
+public static function get_file_contents($filename,$vars) {
+
+		if(!$filename) return '';
+		if(!file_exists($filename)) {
+			$error = "Template file does not exist: '$filename'";
+		    throw new WireException($error); 
+			return '';
+		}
+
+		$savedDir = getcwd();	
+
+		chdir(dirname($filename)); 
+		//$fuel = array_merge($vars, self::$globals); // so that script can foreach all vars to see what's there
+
+		extract($vars); 
+		ob_start();
+		
+		 require($filename); 
+		
+		$out = "\n" . ob_get_contents() . "\n";
+		ob_end_clean();
+
+	    chdir($savedDir); 
+
+		return trim($out); 
+	}
+
+
+
+
+
+
+
+	
+}
